@@ -1,0 +1,182 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+     <title>Ham Radio Recorder</title>
+     <script src="/static/jquery-1.12.4.min.js"></script>
+     <script src="/static/socket.io.js"></script>
+     <script type="text/javascript" charset="utf-8">
+         // An application can open a connection on multiple namespaces, and
+         // Socket.IO will multiplex all those connections on a single
+         // physical channel. If you don't care about multiple channels, you
+         // can set the namespace to an empty string.
+         var socket = io('/info');
+         var recordActive = false;
+
+         $(document).ready(function() {
+           // Event handler for new connections.
+           socket.on('connect', function() {
+               console.log("Client connected");
+           });
+           socket.on('device_status', function(msg) {
+               // console.log("device_status", msg);
+               recordActive = msg.recording_active;
+               if (recordActive) {
+                    $('#button_record').removeClass('button_rec_start');
+                    $('#button_record').addClass('button_rec_stop');
+                    const zeroPad = (num, places) => String(num).padStart(places, '0');
+                    var hrs = Math.floor(msg.recording_time / 3600);
+                    var mins = Math.floor((msg.recording_time % 3600) / 60);
+                    var secs = Math.floor(msg.recording_time) % 60;
+                    $('#button_record').text(`RECORDING ${hrs}:${zeroPad(mins, 2)}:${zeroPad(secs, 2)}`);
+               } else {
+                    $('#button_record').removeClass('button_rec_stop');
+                    $('#button_record').addClass('button_rec_start');
+                    $('#button_record').text("RECORD START");
+               }
+               $('#disk_space').text(msg.disk_space);
+               $('#local_time').text(msg.time);
+               $('#files_count').text(msg.recordings);
+               if (msg.frequency != 0 && msg.mode.length > 0) {
+                   $('#transceiver_mode').text(`${msg.frequency.toLocaleString('en')} ${msg.mode}`);
+               } else {
+                   $('#transceiver_mode').text("-")
+               }
+               $('#device_ip').text(msg.ip);
+               if (msg.audio.length > 0) {
+                     $('#audio_status').text(msg.audio);
+               } else {
+                     $('#audio_status').text("-");
+               }
+               $('#button_11025').removeClass(msg.recording_samplerate == 11025 ? 'button_small' : 'button_small_selected');
+               $('#button_11025').addClass(msg.recording_samplerate == 11025 ? 'button_small_selected' : 'button_small');
+               $('#button_22050').removeClass(msg.recording_samplerate == 22050 ? 'button_small' : 'button_small_selected');
+               $('#button_22050').addClass(msg.recording_samplerate == 22050 ? 'button_small_selected' : 'button_small');
+               $('#button_44100').removeClass(msg.recording_samplerate == 44100 ? 'button_small' : 'button_small_selected');
+               $('#button_44100').addClass(msg.recording_samplerate == 44100 ? 'button_small_selected' : 'button_small');
+               $('#button_mono').removeClass(msg.recording_channels == 1 ? 'button_small2' : 'button_small2_selected');
+               $('#button_mono').addClass(msg.recording_channels == 1 ? 'button_small2_selected' : 'button_small2');
+               $('#button_stereo').removeClass(msg.recording_channels == 2 ? 'button_small2' : 'button_small2_selected');
+               $('#button_stereo').addClass(msg.recording_channels == 2 ? 'button_small2_selected' : 'button_small2');
+           });
+         });
+
+         function httpPostAsync(method, params, callback) {
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function() {
+                if (xmlHttp.readyState == 4) {
+                    if (xmlHttp.status == 200)
+                        callback(xmlHttp.responseText);
+                    else
+                        callback(`Error ${xmlHttp.status}`)
+                }
+            }
+            xmlHttp.open("POST", window.location.href + method, true);
+            xmlHttp.setRequestHeader("Content-Type", "application/json");
+            xmlHttp.send(params);
+         }
+
+         function onButtonRecord() {
+            if (!recordActive) {
+                console.log("Socket send: record_start");
+                socket.emit("record_start");
+            } else {
+                console.log("Socket send: record_stop");
+                socket.emit("record_stop");
+            }
+         }
+
+         function onButtonMono() {
+            console.log("Socket send: set recording mono");
+            socket.emit("set_mode_mono");
+         }
+
+         function onButtonStereo() {
+            console.log("Socket send: set recording stereo");
+            socket.emit("set_mode_stereo");
+         }
+
+         function onButtonSampleRate(sr) {
+            console.log(`Socket send: set sample rate ${sr}`);
+            socket.emit("set_sample_rate", sr);
+         }
+
+     </script>
+     <style>
+        html {font-family: Helvetica, Arial; display:inline-block; margin: 0px auto; text-align: center; background: url(/static/bg.jpg) center center; background-size: cover; background-repeat:no-repeat; height: 100%; color:white;}
+        // h1 {padding: 2vh; padding-top: 100px; font-size: 50px; font-weight: normal; text-transform: uppercase;}
+        // body {width:960px; margin:0 auto}
+        // p {font-size: 1.5rem;}
+        // .product {width: 33%; float: left;}
+        // table.bigFont {font-size: 1.5rem; margin-left:auto; margin-right:auto;}
+        td {padding:0px 10px 0px 10px;}
+        .table_center {
+          margin-left: auto;
+          margin-right: auto;
+        }
+        //.button {display: inline-block; border: none; border-radius: 4px; color: white; padding: 16px 40px; text-decoration: none; font-size: 24px; margin: 2px; cursor: pointer; background: rgba(0, 0, 0, 0.3); padding-bottom:26px;}
+        // .button img {width: 209px; height: auto; margin-bottom: -5px}
+        // .button strong {display: block; line-height: 200%}
+        // .button:hover {background: rgba(0, 0, 0, 0.4)}
+        // .button2 {background-color: #4286f4;}
+        //.button:hover img {
+        //  animation: shake 0.5s;
+        //  animation-iteration-count: 1;
+        //}
+        .button {
+          background-color: #4CAF50; /* Green */
+          border: none;
+          color: white;
+          padding: 20px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 16px;
+          margin: 4px 2px;
+          cursor: pointer;
+        }
+
+        .button_small { border-radius: 4px; padding: 4px; margin: 8px 4px; background-color: #779977; }
+        .button_small:focus { outline: none; box-shadow: none; }
+        .button_small_selected { border-radius: 4px; padding: 4px; margin: 8px 4px; color: red; background-color: #779977; font-weight:bold; }
+        .button_small_selected:focus { outline: none; box-shadow: none; }
+        .button_small2 { border-radius: 4px; padding: 4px; margin: 8px 4px; background-color: #77BB77; }
+        .button_small2:focus { outline: none; box-shadow: none; }
+        .button_small2_selected { border-radius: 4px; padding: 4px; margin: 8px 4px; color: red; background-color: #77BB77; font-weight:bold; }
+        .button_small2_selected:focus { outline: none; box-shadow: none; }
+        // .button3 { border-radius: 8px; }
+        .button_rec_start { border-radius: 12px; background-color: #4CAF50; }
+        .button_rec_start:focus { outline: none; box-shadow: none; }
+        .button_rec_stop { border-radius: 12px; background-color: #E11111; }
+        .button_rec_stop:focus { outline: none; box-shadow: none; }
+        // .button5 { border-radius: 50%; }
+        span { color: #ffffff; }
+     </style>
+  </head>
+
+  <body>
+    <table class="table_center" style="width: 96%;" border="1">
+      <tr>
+          <td style="text-align: left; width: 20%; height: 40px;"><span id="transceiver_mode">-</span></td>
+          <td style="text-align: center; width: 60%;"><span id="device_ip">http://0.0.0.0:8000</span></td>
+          <td style="text-align: right; width: 20%;"><span id="local_time">00:00</span></td>
+      </tr>
+      <tr>
+          <td style="text-align: left; height: 80px;"><span id="disk_space">0</span> <span>GB Free</span></td>
+          <td style="text-align: center;"><button id="button_record" class="button button_rec_start" onclick="onButtonRecord();">RECORD START</button></td>
+          <td style="text-align: right;"><a href="/recordings.html"><span id="files_count">0</span> <span>files recorded</span></a></td>
+      </tr>
+    </table>
+
+    <img src="/static/audio_holder.png" width="300px" height="100px"><br/>
+
+    <span style="opacity: .65;"><b>Transceiver:</b> </span><span id="conn_status">not connected</span><br/>
+    <span style="opacity: .65;"><b>Audio:</b> </span><span id="audio_status">not connected</span><br/>
+    <span style="opacity: .65"><b>Recording:</b> <button id="button_11025" class="button button_small" onclick="onButtonSampleRate(11025);">11025</button>
+                                                 <button id="button_22050" class="button button_small" onclick="onButtonSampleRate(22050);">22050</button>
+                                                 <button id="button_44100" class="button button_small" onclick="onButtonSampleRate(44100);">44100</button>
+                                                 <button id="button_mono" class="button button_small2" onclick="onButtonMono();">MONO</button>
+                                                 <button id="button_stereo" class="button button_small2" onclick="onButtonStereo();">STEREO</button></span>
+
+  </body>
+</html>
+

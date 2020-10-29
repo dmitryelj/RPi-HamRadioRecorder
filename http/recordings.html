@@ -1,0 +1,25 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+     <title>Ham Radio Recorder</title>
+     <script type="text/javascript" charset="utf-8">
+     </script>
+     <style>
+        html {font-family: Helvetica, Arial; display:inline-block; margin: 0px auto; text-align: center; background: url(/static/bg.jpg) center center; background-size: cover; background-repeat:no-repeat; height: 100%; color:white;}
+        div.left { text-align: left; margin: 4px; }
+        td { text-align: center; width: 60%; padding-bottom:4px; padding-top:4px; }
+     </style>
+  </head>
+
+  <body>
+    <div class="left"><a href="/">Up level</a></div>
+    <table class="table_center" style="width: 96%;" border="1">
+      {% for wav in wav_files %}
+      <tr>
+          <td style><a href="/recordings/{{wav}}">{{wav}}</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+
+  </body>
+</html>
